@@ -1,10 +1,10 @@
 package com.example.calculator
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-
 
 class MainActivity : AppCompatActivity() {
     private lateinit var calculateView : TextView
@@ -43,11 +43,12 @@ class MainActivity : AppCompatActivity() {
     private fun appendToCalculate(str : String) {
         calculateView.append(str)
     }
-
+    @SuppressLint("SetTextI18n")
     private fun clearEntry() {
         calculateView.text = ""
     }
 
+    @SuppressLint("SetTextI18n")
     private fun clearAll() {
         calculateView.text = ""
         resultView.text = ""
@@ -60,6 +61,83 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun calculate() {
+        val expression = calculateView.text.toString()
 
+        if (expression.isEmpty()) {
+            resultView.text = "0"
+            return
+        }
+
+        try {
+            val result = evaluateExpression(expression)
+            resultView.text = result.toString()
+        } catch (e : Exception) {
+            resultView.text = ""
+        }
+    }
+
+    private fun evaluateExpression(expression : String) : Double {
+        val formattedExpression = expression.replace("x", "*")
+
+        val tokens = tokenizeExpression(formattedExpression)
+
+        return evaluateTokens(tokens)
+    }
+
+    private fun tokenizeExpression(expression: String): List<String> {
+        val tokens = mutableListOf<String>()
+        var numberBuffer = StringBuilder()
+
+        for (char in expression) {
+            if (char.isDigit() || char == '.')
+                numberBuffer.append(char)
+            else {
+                // If it is an operator, add the number first and then the operator
+                if (numberBuffer.isNotEmpty()) {
+                    tokens.add(numberBuffer.toString())
+                    numberBuffer = StringBuilder()
+                }
+                tokens.add(char.toString()) // Add operator
+            }
+        }
+
+        // Add any remaining number to the token list
+        if (numberBuffer.isNotEmpty())
+            tokens.add(numberBuffer.toString())
+
+        return tokens
+    }
+
+    private fun evaluateTokens(tokens: List<String>) : Double {
+        val stack = mutableListOf<String>()
+
+        var i = 0
+        while (i < tokens.size) {
+            val token = tokens[i]
+
+            if (token == "*" || token == "/") {
+                val previous = stack.removeAt(stack.size - 1).toDouble()
+                val next = tokens[i + 1].toDouble()
+
+                val result = if (token == "*") previous * next else previous / next
+                stack.add(result.toString())
+
+                i += 1 // Skip the next token as it is already processed
+            } else {
+                stack.add(token)
+            }
+            i += 1
+        }
+
+        var result = stack[0].toDouble()
+        i = 1
+        while (i < stack.size) {
+            val operator = stack[i]
+            val nextValue = stack[i + 1].toDouble()
+
+            result = if (operator == "+") result + nextValue else result - nextValue
+            i += 2
+        }
+        return result
     }
 }
